@@ -56,7 +56,7 @@ func (m *Matcher) Register(pattern string, handler MatchFunc) {
 	sort.Sort(sort.Reverse(m.entries))
 }
 
-func (m *Matcher) Call(path, msg string) {
+func (m *Matcher) Call(path string, msg interface{}) {
 	m.RLock()
 	defer m.RUnlock()
 	for _, entry := range m.entries {
