@@ -41,6 +41,10 @@ func Debug(v ...interface{}) {
 	out(logDebug, v...)
 }
 
+func Debugf(f string, v ...interface{}) {
+	outf(logDebug, f, v...)
+}
+
 func Info(v ...interface{}) {
 	out(logInfo, v...)
 }
@@ -53,6 +57,14 @@ func Warn(v ...interface{}) {
 	out(logWarn, v...)
 }
 
+func Warnf(f string, v ...interface{}) {
+	outf(logWarn, f, v...)
+}
+
 func Error(v ...interface{}) {
 	out(logErr, v...)
+}
+
+func Errorf(f string, v ...interface{}) {
+	outf(logErr, f, v...)
 }
