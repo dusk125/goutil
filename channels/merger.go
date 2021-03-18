@@ -1,59 +1,43 @@
 package channels
 
-import (
-	"sync"
-
-	"github.com/dusk125/goutil/logger"
-	"github.com/dusk125/goutil/snowflake"
-)
+import "sync"
 
 type Merger struct {
-	Aggr    chan interface{}
-	entries sync.Map
-	wg      sync.WaitGroup
+	Aggr chan interface{}
+	stop chan interface{}
+	wg   sync.WaitGroup
 }
 
 func NewMerger() (m *Merger) {
 	m = &Merger{
 		Aggr: make(chan interface{}),
+		stop: make(chan interface{}),
 	}
-	// m.entries.Make()
 	return
 }
 
-func (m *Merger) Add(c chan interface{}) {
+func (m *Merger) Add(c chan interface{}, onstop func()) {
 	m.wg.Add(1)
-	var (
-		id = snowflake.New("chan")
-	)
-	// m.entries.Put(id, c)
-	m.entries.Store(id, c)
-	go func() {
-		defer func() {
-			logger.Debug("Calling delete")
-			m.entries.Delete(id)
-			logger.Debug("delete done")
-			m.wg.Done()
-			logger.Debug("done done")
-		}()
-		for item := range c {
-			m.Aggr <- item
+	go func(stop, c <-chan interface{}) {
+		defer m.wg.Done()
+		for {
+			select {
+			case <-stop:
+				onstop()
+				return
+			case item, ok := <-c:
+				if !ok {
+					return
+				}
+
+				m.Aggr <- item
+			}
 		}
-	}()
+	}(m.stop, c)
 }
 
 func (m *Merger) Close() {
-	logger.Debug("Calling range")
-	m.entries.Range(func(key, value interface{}) bool {
-		close(value.(chan interface{}))
-		return true
-	})
-	// m.entries.Range(func(key string, c *SafeChan) (needDelete bool) {
-	// 	c.Close()
-	// 	return
-	// })
-	logger.Debug("range done")
+	close(m.stop)
 	m.wg.Wait()
-	logger.Debug("done waiting")
 	close(m.Aggr)
 }
