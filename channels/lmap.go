@@ -58,7 +58,7 @@ func (m *SafeChanMap) GetOrPut(k string, p *SafeChan) (v *SafeChan, put bool) {
 	return
 }
 
-func (m *SafeChanMap) Range(h func(string, *SafeChan) bool, keys ...string) {
+func (m *SafeChanMap) Range(h func(key string, c *SafeChan) (needDelete bool), keys ...string) {
 	m.Lock()
 	defer m.Unlock()
 
