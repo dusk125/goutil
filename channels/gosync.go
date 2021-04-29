@@ -11,13 +11,11 @@ func NewGoSync() (s *GoSync) {
 	return
 }
 
-func (s *GoSync) Add(fs ...func(stop <-chan interface{})) {
-	for _, f := range fs {
-		go func(stop <-chan interface{}, f func(stop <-chan interface{})) {
-			defer s.group.CloseAll()
-			f(stop)
-		}(s.group.Chan(), f)
-	}
+func (s *GoSync) Add(f func(stop <-chan interface{})) {
+	go func(stop <-chan interface{}) {
+		defer s.group.CloseAll()
+		f(stop)
+	}(s.group.Chan())
 }
 
 func (s *GoSync) StopAll() {
