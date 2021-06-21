@@ -2,6 +2,7 @@ package logger
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"strings"
@@ -67,4 +68,8 @@ func Error(v ...interface{}) {
 
 func Errorf(f string, v ...interface{}) {
 	outf(logErr, f, v...)
+}
+
+func ErrorWriter() io.Writer {
+	return logErr.Writer()
 }
