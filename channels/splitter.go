@@ -1,37 +1,61 @@
 package channels
 
+import "github.com/dusk125/goutil/snowflake"
+
+type splitadd struct {
+	id string
+	ch chan interface{}
+}
+
 type Splitter struct {
 	Dispatch   chan interface{}
-	entries    SafeChanMap
+	entries    map[string]chan interface{}
 	closeCheck chan struct{}
+	ar         chan splitadd
 }
 
 func NewSplitter() (s *Splitter) {
 	s = &Splitter{
 		Dispatch:   make(chan interface{}),
 		closeCheck: make(chan struct{}),
+		entries:    make(map[string]chan interface{}),
+		ar:         make(chan splitadd),
 	}
-	s.entries.Make()
 	go s.handle()
 	return
 }
 
 func (s *Splitter) handle() {
-	for item := range s.Dispatch {
-		s.entries.Range(func(k string, v *SafeChan) bool {
-			return !v.Send(item)
-		})
+	for {
+		select {
+		case item, ok := <-s.Dispatch:
+			if !ok {
+				return
+			}
+			for _, entry := range s.entries {
+				entry <- item
+			}
+		case ar, ok := <-s.ar:
+			if !ok {
+				return
+			}
+			if ch, has := s.entries[ar.id]; has {
+				close(ch)
+				delete(s.entries, ar.id)
+			} else {
+				s.entries[ar.id] = ar.ch
+			}
+		}
 	}
 }
 
-func (s *Splitter) Add(id string) (c *SafeChan) {
-	c = NewSafeChan()
-	s.entries.Put(id, c)
+func (s *Splitter) Add() <-chan interface{} {
+	c := make(chan interface{})
+	s.ar <- splitadd{
+		id: snowflake.New("ch"),
+		ch: c,
+	}
 	return c
-}
-
-func (s *Splitter) Count() int {
-	return s.entries.Len()
 }
 
 func (s *Splitter) IsOpen() bool {
@@ -46,7 +70,7 @@ func (s *Splitter) IsOpen() bool {
 func (s *Splitter) Close() {
 	close(s.closeCheck)
 	close(s.Dispatch)
-	s.entries.Clear(func(k string, v *SafeChan) {
-		v.Close()
-	})
+	for _, ch := range s.entries {
+		close(ch)
+	}
 }
