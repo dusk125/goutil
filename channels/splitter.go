@@ -49,13 +49,20 @@ func (s *Splitter) handle() {
 	}
 }
 
-func (s *Splitter) Add() <-chan interface{} {
+func (s *Splitter) Add() (string, <-chan interface{}) {
+	id := snowflake.New("ch")
 	c := make(chan interface{})
 	s.ar <- splitadd{
-		id: snowflake.New("ch"),
+		id: id,
 		ch: c,
 	}
-	return c
+	return id, c
+}
+
+func (s *Splitter) Remove(id string) {
+	s.ar <- splitadd{
+		id: id,
+	}
 }
 
 func (s *Splitter) IsOpen() bool {
