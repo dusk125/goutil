@@ -16,7 +16,7 @@ func NewMerger() (m *Merger) {
 	return
 }
 
-func (m *Merger) Add(c chan interface{}, onstop func()) {
+func (m *Merger) Add(c <-chan interface{}, onstop func()) {
 	m.wg.Add(1)
 	go func(stop, c <-chan interface{}) {
 		defer m.wg.Done()
