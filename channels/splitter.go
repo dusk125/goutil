@@ -1,7 +1,5 @@
 package channels
 
-import "github.com/dusk125/goutil/snowflake"
-
 type splitadd struct {
 	id string
 	ch chan interface{}
@@ -49,14 +47,13 @@ func (s *Splitter) handle() {
 	}
 }
 
-func (s *Splitter) Add() (string, <-chan interface{}) {
-	id := snowflake.New("ch")
+func (s *Splitter) Add(id string) <-chan interface{} {
 	c := make(chan interface{})
 	s.ar <- splitadd{
 		id: id,
 		ch: c,
 	}
-	return id, c
+	return c
 }
 
 func (s *Splitter) Remove(id string) {
