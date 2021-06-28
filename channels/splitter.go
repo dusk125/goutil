@@ -10,6 +10,7 @@ type Splitter struct {
 	entries    map[string]chan interface{}
 	closeCheck chan struct{}
 	ar         chan splitadd
+	OnEmpty    func()
 }
 
 func NewSplitter() (s *Splitter) {
@@ -18,6 +19,7 @@ func NewSplitter() (s *Splitter) {
 		closeCheck: make(chan struct{}),
 		entries:    make(map[string]chan interface{}),
 		ar:         make(chan splitadd),
+		OnEmpty:    func() {},
 	}
 	go s.handle()
 	return
@@ -40,7 +42,8 @@ func (s *Splitter) handle() {
 			if ch, has := s.entries[ar.id]; has {
 				close(ch)
 				delete(s.entries, ar.id)
-			} else {
+				s.OnEmpty()
+			} else if ar.ch != nil {
 				s.entries[ar.id] = ar.ch
 			}
 		}
