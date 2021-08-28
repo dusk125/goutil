@@ -1,12 +1,16 @@
 package snowflake
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/twinj/uuid"
 )
 
-func New(prefix string) string {
-	return fmt.Sprintf("%s_%s", prefix, strings.ReplaceAll(uuid.NewV4().String(), "-", ""))
+func New(prefixes ...string) (s string) {
+	id := strings.ReplaceAll(uuid.NewV4().String(), "-", "")
+
+	for _, p := range prefixes {
+		s += p + "_"
+	}
+	return s + id
 }
