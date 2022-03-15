@@ -2,6 +2,7 @@ package matcher
 
 import (
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/dusk125/goutil/v2/lockable"
@@ -19,12 +20,12 @@ type matchEntry struct {
 type Vars map[string]string
 
 type Matcher struct {
-	entries *lockable.List[matchEntry]
+	entries *lockable.Locker[[]matchEntry]
 }
 
 func NewMatcher() *Matcher {
 	return &Matcher{
-		entries: lockable.NewList[matchEntry](),
+		entries: lockable.New([]matchEntry{}),
 	}
 }
 
@@ -45,21 +46,24 @@ func (m *Matcher) Register(pattern string, handler MatchFunc) {
 
 	entry.exp = regexp.MustCompile(strings.Join(pieces, `\.`))
 
-	m.entries.Append(entry)
-	m.entries.SortSlice(func(i, j matchEntry) bool { return i.length > j.length })
+	m.entries.Get(func(item *[]matchEntry) {
+		*item = append(*item, entry)
+		sort.Slice(*item, func(i, j int) bool { return (*item)[i].length > (*item)[j].length })
+	})
 }
 
 func (m *Matcher) Call(path string, msg interface{}) {
-	m.entries.Foreach(func(i int, v matchEntry) bool {
-		matches := v.exp.FindStringSubmatch(path)
-		if matches != nil {
-			vars := make(Vars)
-			for i, item := range matches[1:] {
-				vars[v.vars[i]] = item
+	m.entries.RGet(func(item *[]matchEntry) {
+		for _, v := range *item {
+			matches := v.exp.FindStringSubmatch(path)
+			if matches != nil {
+				vars := make(Vars)
+				for i, item := range matches[1:] {
+					vars[v.vars[i]] = item
+				}
+				v.handler(vars, msg)
+				break
 			}
-			v.handler(vars, msg)
-			return true
 		}
-		return false
 	})
 }

@@ -28,13 +28,6 @@ func NewSplitter[T any]() (s *Splitter[T]) {
 func (s *Splitter[T]) handle() {
 	for {
 		select {
-		case item, ok := <-s.Dispatch:
-			if !ok {
-				return
-			}
-			for _, entry := range s.entries {
-				entry <- item
-			}
 		case ar, ok := <-s.ar:
 			if !ok {
 				return
@@ -45,6 +38,13 @@ func (s *Splitter[T]) handle() {
 				s.OnEmpty()
 			} else if ar.ch != nil {
 				s.entries[ar.id] = ar.ch
+			}
+		case item, ok := <-s.Dispatch:
+			if !ok {
+				return
+			}
+			for _, entry := range s.entries {
+				entry <- item
 			}
 		}
 	}
