@@ -1,6 +1,8 @@
 package lockable
 
-import "sync"
+import (
+	"sync"
+)
 
 type Locker[T any] struct {
 	l sync.RWMutex
