@@ -33,10 +33,12 @@ func (m *Map[K, V]) Len() int {
 	return len(m.e)
 }
 
-func (m *Map[K, V]) Delete(k K) {
+func (m *Map[K, V]) Delete(k K) (v V, has bool) {
 	m.l.Lock()
 	defer m.l.Unlock()
+	v, has = m.e[k]
 	delete(m.e, k)
+	return
 }
 
 func (m *Map[K, V]) Foreach(f func(k K, v V)) {
