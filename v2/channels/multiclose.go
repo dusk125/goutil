@@ -9,7 +9,7 @@ type ChanWriter[T any] interface {
 
 // ChanReader gives permission to a callee to read from a channel
 type ChanReader[T any] interface {
-	Read() (v T, ok bool)
+	Read() <-chan T
 }
 
 // ChanCloser gives permission to a callee to close a channel
@@ -67,7 +67,6 @@ func (m *MulticloseChan[T]) Write(v T) {
 }
 
 // Read from the underlying channel
-func (m *MulticloseChan[T]) Read() (v T, ok bool) {
-	v, ok = <-m.ch
-	return
+func (m *MulticloseChan[T]) Read() <-chan T {
+	return m.ch
 }
