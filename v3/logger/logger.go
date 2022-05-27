@@ -32,6 +32,7 @@ func init() {
 	}
 }
 
+// Sets the given flags to all of the loggers, including the default package 'log' logger.
 func SetFlags(flags int) {
 	log.SetFlags(flags)
 	for _, logger := range loggers {
@@ -39,6 +40,10 @@ func SetFlags(flags int) {
 	}
 }
 
+// Sets the filtering level for the logging system.
+// 	A value will allow all message at, and below, it's logging level.
+// 	For example, setting the logging level to LevelDebug will allow all Debug, Info, Warn, Error, and Fatal messages through.
+// 	Setting the level to LevelError will allow only Error and Fatal through.
 func SetLevel(l Level) {
 	atomic.StoreUint32(&level, uint32(l))
 }
