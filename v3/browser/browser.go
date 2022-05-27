@@ -6,6 +6,7 @@ import (
 	"runtime"
 )
 
+// Attempts to open the given url in the default browser
 func Open(url string) (err error) {
 	switch runtime.GOOS {
 	case "linux":
