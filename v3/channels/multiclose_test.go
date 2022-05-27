@@ -3,6 +3,8 @@ package channels
 import (
 	"context"
 	"errors"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -212,5 +214,58 @@ func TestMultiOpen(t *testing.T) {
 	m.Make(1)
 	if &m.ch != c {
 		t.Error("second Open was not a no-op as expected")
+	}
+}
+
+func TestNotifyClosed(t *testing.T) {
+	m := MulticloseMake[struct{}](0)
+	defer m.Close()
+
+	var complete uint32
+	wg := sync.WaitGroup{}
+	dl, _ := t.Deadline()
+	ct, cancel := context.WithDeadline(context.Background(), dl)
+	defer cancel()
+
+	wg.Add(1)
+	go func(complete *uint32) {
+		defer wg.Done()
+		select {
+		case <-ct.Done():
+			t.Error("failed to get notify closed within the deadline")
+			return
+		case <-m.Context().Done():
+			atomic.StoreUint32(complete, 1)
+			return
+		}
+	}(&complete)
+
+	m.Close()
+	wg.Wait()
+	if complete != 1 {
+		t.Errorf("expected complete to be 1, was %v", complete)
+	}
+}
+
+func TestChanContext(t *testing.T) {
+	m := MulticloseMake[struct{}](0)
+	defer m.Close()
+
+	var complete uint32
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go func(complete *uint32) {
+		defer func() {
+			atomic.StoreUint32(complete, 1)
+			wg.Done()
+		}()
+		<-m.Context().Done()
+	}(&complete)
+
+	m.Close()
+	wg.Wait()
+
+	if complete != 1 {
+		t.Errorf("expected complete to be 1, was %v", complete)
 	}
 }
