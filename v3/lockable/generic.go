@@ -13,13 +13,13 @@ func New[T any](i T) *Locker[T] {
 	return &Locker[T]{i: i}
 }
 
-func (l *Locker[T]) RGet(f func(item *T)) {
+func (l *Locker[T]) Get(f func(item T)) {
 	l.l.RLock()
 	defer l.l.RUnlock()
-	f(&l.i)
+	f(l.i)
 }
 
-func (l *Locker[T]) Get(f func(item *T)) {
+func (l *Locker[T]) Set(f func(item *T)) {
 	l.l.Lock()
 	defer l.l.Unlock()
 	f(&l.i)
