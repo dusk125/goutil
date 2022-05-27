@@ -7,7 +7,7 @@ import (
 
 // ChanWriter gives permission to a callee to write to a channel
 type ChanWriter[T any] interface {
-	Write(v T)
+	Write(v T) bool
 }
 
 // ChanReader gives permission to a callee to read from a channel
@@ -80,10 +80,12 @@ func (m *MulticloseChan[T]) Close() {
 }
 
 // Write to the underlying channel, if the underlying channel is closed, no-op.
-func (m *MulticloseChan[T]) Write(v T) {
+func (m *MulticloseChan[T]) Write(v T) bool {
 	if m.Open() {
 		m.ch <- v
+		return true
 	}
+	return false
 }
 
 // Read from the underlying channel

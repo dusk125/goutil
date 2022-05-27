@@ -9,6 +9,7 @@ import (
 
 var (
 	ErrExpectedClosed = errors.New("expected channel to be closed, but it was still open")
+	ErrExpectedWrite  = errors.New("expected to write the channel, instead it failed to write")
 )
 
 func TestMultiGoroutineClose(t *testing.T) {
@@ -39,7 +40,9 @@ func TestChanReader(t *testing.T) {
 		<-reader.Read()
 	}(m)
 
-	m.Write(struct{}{})
+	if !m.Write(struct{}{}) {
+		t.Error(ErrExpectedWrite)
+	}
 }
 
 func TestChanWriter(t *testing.T) {
@@ -47,7 +50,9 @@ func TestChanWriter(t *testing.T) {
 	defer m.Close()
 
 	go func(writer ChanWriter[struct{}]) {
-		writer.Write(struct{}{})
+		if !writer.Write(struct{}{}) {
+			t.Error(ErrExpectedWrite)
+		}
 	}(m)
 
 	<-m.Read()
@@ -75,7 +80,9 @@ func TestChanReadCloser(t *testing.T) {
 		rc.Close()
 	}(m)
 
-	m.Write(struct{}{})
+	if !m.Write(struct{}{}) {
+		t.Error(ErrExpectedWrite)
+	}
 
 	if m.Open() {
 		t.Error(ErrExpectedClosed)
@@ -87,7 +94,9 @@ func TestChanWriteCloser(t *testing.T) {
 	defer m.Close()
 
 	go func(wc ChanWriteCloser[int]) {
-		wc.Write(1)
+		if !wc.Write(1) {
+			t.Error(ErrExpectedWrite)
+		}
 		wc.Close()
 	}(m)
 
@@ -113,7 +122,9 @@ func TestChanReadWriter(t *testing.T) {
 	defer m.Close()
 
 	func(rw ChanReadWriter[int]) {
-		rw.Write(1)
+		if !rw.Write(1) {
+			t.Error(ErrExpectedWrite)
+		}
 		i := <-rw.Read()
 		if i != 1 {
 			t.Errorf("expected read value to be 1, was: %v", i)
@@ -127,7 +138,9 @@ func TestChanReadWriteCloser(t *testing.T) {
 	defer m.Close()
 
 	func(rwc ChanReadWriteCloser[int]) {
-		rwc.Write(1)
+		if !rwc.Write(1) {
+			t.Error(ErrExpectedWrite)
+		}
 		i := <-rwc.Read()
 		if i != 1 {
 			t.Errorf("expected read value to be 1, was: %v", i)
@@ -143,14 +156,20 @@ func TestChanBuffer(t *testing.T) {
 	m := MulticloseMake[struct{}](2)
 	defer m.Close()
 
-	m.Write(struct{}{})
-	m.Write(struct{}{})
+	if !m.Write(struct{}{}) {
+		t.Error(ErrExpectedWrite)
+	}
+	if !m.Write(struct{}{}) {
+		t.Error(ErrExpectedWrite)
+	}
 	go func(r ChanReader[struct{}]) {
 		for i := 0; i < 3; i++ {
 			<-r.Read()
 		}
 	}(m)
-	m.Write(struct{}{})
+	if !m.Write(struct{}{}) {
+		t.Error(ErrExpectedWrite)
+	}
 }
 
 func TestChanClosedWrite(t *testing.T) {
@@ -161,7 +180,9 @@ func TestChanClosedWrite(t *testing.T) {
 		t.Error(ErrExpectedClosed)
 	}
 
-	m.Write(struct{}{})
+	if m.Write(struct{}{}) {
+		t.Error("expected to not write to the channel since it's closed, instead it wrote to the channel")
+	}
 }
 
 func TestZeroChan(t *testing.T) {
@@ -174,7 +195,9 @@ func TestZeroChan(t *testing.T) {
 
 	m.Make(1)
 
-	m.Write(1)
+	if !m.Write(1) {
+		t.Error(ErrExpectedWrite)
+	}
 	i := <-m.Read()
 	if i != 1 {
 		t.Errorf("expected read value to be 1, was: %v", i)
