@@ -185,9 +185,8 @@ func TestMultiOpen(t *testing.T) {
 	m := MulticloseMake[struct{}](0)
 	defer m.Close()
 
-	m.Open()
 	c := &m.ch
-	m.Open()
+	m.Make(1)
 	if &m.ch != c {
 		t.Error("second Open was not a no-op as expected")
 	}
