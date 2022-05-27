@@ -1,6 +1,9 @@
 package channels
 
-import "sync"
+import (
+	"sync"
+	"sync/atomic"
+)
 
 // ChanWriter gives permission to a callee to write to a channel
 type ChanWriter[T any] interface {
@@ -36,7 +39,7 @@ type ChanReadWriter[T any] interface {
 }
 
 // Gives all read, write, and close permissions
-type ChanReadWriterCloser[T any] interface {
+type ChanReadWriteCloser[T any] interface {
 	ChanReader[T]
 	ChanWriter[T]
 	ChanCloser[T]
@@ -44,26 +47,43 @@ type ChanReadWriterCloser[T any] interface {
 
 // The Multiclose Chan is a channel that can only ever be closed once, additional calls to Close() will be a no-op.
 type MulticloseChan[T any] struct {
-	ch chan T
-	o  sync.Once
+	ch   chan T
+	open int32
+	o, c sync.Once
 }
 
 func MulticloseMake[T any](buffered int) *MulticloseChan[T] {
-	return &MulticloseChan[T]{
-		ch: make(chan T, buffered),
-	}
+	c := MulticloseChan[T]{}
+	c.Make(buffered)
+	return &c
+}
+
+func (m *MulticloseChan[T]) Make(buffered int) {
+	m.o.Do(func() {
+		m.ch = make(chan T, buffered)
+		atomic.StoreInt32(&m.open, 1)
+	})
+}
+
+func (m *MulticloseChan[T]) Open() bool {
+	return atomic.LoadInt32(&m.open) == 1
 }
 
 // Close the MulticloseChan; multiple invocations (across goroutines) are allowed.
 // 	If this is the first time this has been called on this channel, close it;
 // 	if this is a subsequent call to close, then no-op.
 func (m *MulticloseChan[T]) Close() {
-	m.o.Do(func() { close(m.ch) })
+	m.c.Do(func() {
+		atomic.StoreInt32(&m.open, 0)
+		close(m.ch)
+	})
 }
 
-// Write to the underlying channel
+// Write to the underlying channel, if the underlying channel is closed, no-op.
 func (m *MulticloseChan[T]) Write(v T) {
-	m.ch <- v
+	if m.Open() {
+		m.ch <- v
+	}
 }
 
 // Read from the underlying channel
