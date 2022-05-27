@@ -6,70 +6,106 @@ import (
 	"log"
 	"os"
 	"strings"
+	"sync/atomic"
+)
+
+type Level uint32
+
+const (
+	LevelFatal Level = iota
+	LevelError
+	LevelWarn
+	LevelInfo
+	LevelDebug
+	LevelTrace
 )
 
 var (
-	logErr, logWarn, logInfo, logDebug *log.Logger
+	loggers = [LevelTrace]*log.Logger{}
+	level   uint32
 )
 
 func init() {
-	logDebug = log.New(os.Stdout, "[DEBUG] ", 0)
-	logInfo = log.New(os.Stdout, "[Info] ", 0)
-	logWarn = log.New(os.Stdout, "[Warn] ", 0)
-	logErr = log.New(os.Stdout, "[ERROR] ", 0)
+	SetLevel(LevelInfo)
+	for i := range loggers {
+		loggers[i] = log.New(os.Stdout, fmt.Sprintf("[%v] ", Level(i)), 0)
+	}
 }
 
 func SetFlags(flags int) {
 	log.SetFlags(flags)
-	logDebug.SetFlags(flags)
-	logInfo.SetFlags(flags)
-	logWarn.SetFlags(flags)
-	logErr.SetFlags(flags)
-}
-
-func out(logger *log.Logger, v ...interface{}) {
-	_ = logger.Output(3, fmt.Sprintln(v...))
-}
-
-func outf(logger *log.Logger, f string, v ...interface{}) {
-	if !strings.HasSuffix(f, "\n") {
-		f += "\n"
+	for _, logger := range loggers {
+		logger.SetFlags(flags)
 	}
-	_ = logger.Output(3, fmt.Sprintf(f, v...))
 }
 
-func Debug(v ...interface{}) {
-	out(logDebug, v...)
+func SetLevel(l Level) {
+	atomic.StoreUint32(&level, uint32(l))
 }
 
-func Debugf(f string, v ...interface{}) {
-	outf(logDebug, f, v...)
+func out(logger Level, v ...any) {
+	if Level(atomic.LoadUint32(&level)) <= logger {
+		_ = loggers[logger].Output(3, fmt.Sprintln(v...))
+	}
 }
 
-func Info(v ...interface{}) {
-	out(logInfo, v...)
+func outf(logger Level, f string, v ...any) {
+	if Level(atomic.LoadUint32(&level)) <= logger {
+		if !strings.HasSuffix(f, "\n") {
+			f += "\n"
+		}
+		_ = loggers[logger].Output(3, fmt.Sprintf(f, v...))
+	}
 }
 
-func Infof(f string, v ...interface{}) {
-	outf(logInfo, f, v...)
+func Trace(v ...any) {
+	out(LevelTrace, v...)
 }
 
-func Warn(v ...interface{}) {
-	out(logWarn, v...)
+func Tracef(f string, v ...any) {
+	outf(LevelTrace, f, v...)
 }
 
-func Warnf(f string, v ...interface{}) {
-	outf(logWarn, f, v...)
+func Debug(v ...any) {
+	out(LevelDebug, v...)
 }
 
-func Error(v ...interface{}) {
-	out(logErr, v...)
+func Debugf(f string, v ...any) {
+	outf(LevelDebug, f, v...)
 }
 
-func Errorf(f string, v ...interface{}) {
-	outf(logErr, f, v...)
+func Info(v ...any) {
+	out(LevelInfo, v...)
+}
+
+func Infof(f string, v ...any) {
+	outf(LevelInfo, f, v...)
+}
+
+func Warn(v ...any) {
+	out(LevelWarn, v...)
+}
+
+func Warnf(f string, v ...any) {
+	outf(LevelWarn, f, v...)
+}
+
+func Error(v ...any) {
+	out(LevelError, v...)
+}
+
+func Errorf(f string, v ...any) {
+	outf(LevelError, f, v...)
+}
+
+func Fatal(v ...any) {
+	out(LevelFatal, v...)
+}
+
+func Fatalf(f string, v ...any) {
+	outf(LevelFatal, f, v...)
 }
 
 func ErrorWriter() io.Writer {
-	return logErr.Writer()
+	return loggers[LevelError].Writer()
 }
