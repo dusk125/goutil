@@ -123,10 +123,12 @@ func Errorf(f string, v ...any) {
 
 func Fatal(v ...any) {
 	out(LevelFatal, v...)
+	os.Exit(1)
 }
 
 func Fatalf(f string, v ...any) {
 	outf(LevelFatal, f, v...)
+	os.Exit(1)
 }
 
 func ErrorWriter() io.Writer {
