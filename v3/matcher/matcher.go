@@ -46,15 +46,15 @@ func (m *Matcher) Register(pattern string, handler MatchFunc) {
 
 	entry.exp = regexp.MustCompile(strings.Join(pieces, `\.`))
 
-	m.entries.Get(func(item *[]matchEntry) {
+	m.entries.Set(func(item *[]matchEntry) {
 		*item = append(*item, entry)
 		sort.Slice(*item, func(i, j int) bool { return (*item)[i].length > (*item)[j].length })
 	})
 }
 
 func (m *Matcher) Call(path string, msg interface{}) {
-	m.entries.RGet(func(item *[]matchEntry) {
-		for _, v := range *item {
+	m.entries.Get(func(item []matchEntry) {
+		for _, v := range item {
 			matches := v.exp.FindStringSubmatch(path)
 			if matches != nil {
 				vars := make(Vars)
