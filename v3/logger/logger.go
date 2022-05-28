@@ -20,6 +20,24 @@ const (
 	LevelTrace
 )
 
+func (l Level) String() string {
+	switch l {
+	case LevelFatal:
+		return "Fatal"
+	case LevelError:
+		return "Error"
+	case LevelWarn:
+		return "Warn"
+	case LevelInfo:
+		return "Info"
+	case LevelDebug:
+		return "Debug"
+	case LevelTrace:
+		return "Trace"
+	}
+	return ""
+}
+
 var (
 	loggers = [LevelTrace]*log.Logger{}
 	level   uint32
