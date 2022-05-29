@@ -39,7 +39,7 @@ func (l Level) String() string {
 }
 
 var (
-	loggers = [LevelTrace]*log.Logger{}
+	loggers = [LevelTrace + 1]*log.Logger{}
 	level   uint32
 )
 
