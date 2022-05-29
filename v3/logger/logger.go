@@ -67,13 +67,13 @@ func SetLevel(l Level) {
 }
 
 func out(logger Level, v ...any) {
-	if Level(atomic.LoadUint32(&level)) <= logger {
+	if Level(atomic.LoadUint32(&level)) >= logger {
 		_ = loggers[logger].Output(3, fmt.Sprintln(v...))
 	}
 }
 
 func outf(logger Level, f string, v ...any) {
-	if Level(atomic.LoadUint32(&level)) <= logger {
+	if Level(atomic.LoadUint32(&level)) >= logger {
 		if !strings.HasSuffix(f, "\n") {
 			f += "\n"
 		}
