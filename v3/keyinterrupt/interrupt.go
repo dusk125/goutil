@@ -17,6 +17,5 @@ func init() {
 }
 
 func Wait() {
-	defer close(wait)
 	<-wait
 }
