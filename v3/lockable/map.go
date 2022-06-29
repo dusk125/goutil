@@ -14,6 +14,12 @@ func NewMap[K comparable, V any]() *Map[K, V] {
 	return &Map[K, V]{e: make(map[K]V)}
 }
 
+func (m *Map[K, V]) Make() {
+	m.l.Lock()
+	defer m.l.Unlock()
+	m.e = make(map[K]V)
+}
+
 func (m *Map[K, V]) Get(k K) (v V, has bool) {
 	m.l.RLock()
 	defer m.l.RUnlock()
