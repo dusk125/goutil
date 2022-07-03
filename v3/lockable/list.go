@@ -39,7 +39,39 @@ func (l *List[T]) Len() int {
 	return len(l.e)
 }
 
-func (l *List[T]) Foreach(f func(i int, v T) bool) {
+func (l *List[T]) Find(f func(i int, v T) bool) int {
+	l.l.RLock()
+	defer l.l.RUnlock()
+	for i, v := range l.e {
+		if f(i, v) {
+			return i
+		}
+	}
+	return len(l.e)
+}
+
+func (l *List[T]) Delete(i int) {
+	l.l.Lock()
+	defer l.l.Unlock()
+	l.e = append(l.e[:i], l.e[i+1:]...)
+}
+
+func (l *List[T]) FindAndDelete(f func(i int, v T) bool) {
+	l.l.Lock()
+	defer l.l.Unlock()
+	var i int
+	var v T
+	for i, v = range l.e {
+		if f(i, v) {
+			break
+		}
+	}
+	if i < len(l.e) {
+		l.e = append(l.e[:i], l.e[i+1:]...)
+	}
+}
+
+func (l *List[T]) Foreach(f func(i int, v T)) {
 	l.l.RLock()
 	defer l.l.RUnlock()
 	for i, v := range l.e {
