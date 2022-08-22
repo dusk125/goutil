@@ -58,10 +58,18 @@ func SetFlags(flags int) {
 	}
 }
 
+func SetOutput(w io.Writer) {
+	log.SetOutput(w)
+	for _, logger := range loggers {
+		logger.SetOutput(w)
+	}
+}
+
 // Sets the filtering level for the logging system.
-// 	A value will allow all message at, and below, it's logging level.
-// 	For example, setting the logging level to LevelDebug will allow all Debug, Info, Warn, Error, and Fatal messages through.
-// 	Setting the level to LevelError will allow only Error and Fatal through.
+//
+//	A value will allow all message at, and below, it's logging level.
+//	For example, setting the logging level to LevelDebug will allow all Debug, Info, Warn, Error, and Fatal messages through.
+//	Setting the level to LevelError will allow only Error and Fatal through.
 func SetLevel(l Level) {
 	atomic.StoreUint32(&level, uint32(l))
 }
