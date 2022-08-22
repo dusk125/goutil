@@ -2,20 +2,36 @@
 package keyinterrupt
 
 import (
+	"context"
 	"os"
 	"os/signal"
 	"syscall"
 )
 
 var (
-	wait chan os.Signal
+	wait   chan os.Signal
+	ctx    context.Context
+	cancel context.CancelFunc
 )
 
 func init() {
+	ctx, cancel = context.WithCancel(context.Background())
 	wait = make(chan os.Signal, 1)
 	signal.Notify(wait, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-wait
+		cancel()
+	}()
+}
+
+func Cancel() {
+	cancel()
 }
 
 func Wait() {
-	<-wait
+	<-ctx.Done()
+}
+
+func Context() context.Context {
+	return ctx
 }
