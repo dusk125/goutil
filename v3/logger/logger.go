@@ -44,7 +44,24 @@ var (
 )
 
 func init() {
-	SetLevel(LevelInfo)
+	l := LevelInfo
+	if level, has := os.LookupEnv("LOG_LEVEL"); has {
+		switch strings.ToLower(level) {
+		case "fatal":
+			l = LevelFatal
+		case "error":
+			l = LevelError
+		case "warn":
+			l = LevelWarn
+		case "info":
+			l = LevelInfo
+		case "debug":
+			l = LevelDebug
+		case "trace":
+			l = LevelTrace
+		}
+	}
+	SetLevel(l)
 	for i := range loggers {
 		loggers[i] = log.New(os.Stdout, fmt.Sprintf("[%v] ", Level(i)), 0)
 	}
