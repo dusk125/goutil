@@ -1,43 +1,56 @@
 package channels
 
-import "sync"
+import (
+	"sync"
+)
 
-type Merger struct {
-	Aggr chan interface{}
-	stop chan interface{}
+// The Merger allows multiple writers to a single channel without worrying about writing to a closed channel
+type Merger[T any] struct {
+	aggr *MulticloseChan[T]
 	wg   sync.WaitGroup
 }
 
-func NewMerger() (m *Merger) {
-	m = &Merger{
-		Aggr: make(chan interface{}),
-		stop: make(chan interface{}),
+func NewMerger[T any]() (m *Merger[T]) {
+	m = &Merger[T]{
+		aggr: MulticloseMake[T](1),
 	}
 	return
 }
 
-func (m *Merger) Add(c <-chan interface{}, onstop func()) {
-	m.wg.Add(1)
-	go func(stop, c <-chan interface{}) {
-		defer m.wg.Done()
-		for {
-			select {
-			case <-stop:
-				onstop()
-				return
-			case item, ok := <-c:
-				if !ok {
-					return
-				}
-
-				m.Aggr <- item
-			}
-		}
-	}(m.stop, c)
+// Provides an channel reader to consume the aggregate stream.
+func (m *Merger[T]) Aggr() ChanReader[T] {
+	return m.aggr
 }
 
-func (m *Merger) Close() {
-	close(m.stop)
+// Adds a channel to the stream and returns it; will call 'onstop' when the Merger is closed.
+func (m *Merger[T]) Add(onstop func()) ChanWriter[T] {
+	c := MulticloseMake[T](0)
+	m.wg.Add(1)
+	go func(c ChanReadCloser[T], n ChanWriter[T], onstop func()) {
+		defer func() {
+			c.Close()
+			if onstop != nil {
+				onstop()
+			}
+			m.wg.Done()
+		}()
+		for {
+			select {
+			case <-m.aggr.Context().Done():
+				return
+			case i := <-c.Read():
+				// If we failed to write, then the channel is closed and we should be done
+				if !n.Write(i) {
+					return
+				}
+			}
+		}
+	}(c, m.aggr, onstop)
+	return c
+}
+
+// Close the Merger and stop all goroutines associated with it.
+func (m *Merger[T]) Close() {
+	m.aggr.Close()
 	m.wg.Wait()
-	close(m.Aggr)
 }

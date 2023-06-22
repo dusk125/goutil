@@ -1,40 +1,33 @@
 package channels
 
-type splitadd struct {
+type splitadd[T any] struct {
 	id string
-	ch chan interface{}
+	ch chan T
 }
 
-type Splitter struct {
-	Dispatch   chan interface{}
-	entries    map[string]chan interface{}
+type Splitter[T any] struct {
+	Dispatch   chan T
+	entries    map[string]chan T
 	closeCheck chan struct{}
-	ar         chan splitadd
+	ar         chan splitadd[T]
 	OnEmpty    func()
 }
 
-func NewSplitter() (s *Splitter) {
-	s = &Splitter{
-		Dispatch:   make(chan interface{}),
+func NewSplitter[T any]() (s *Splitter[T]) {
+	s = &Splitter[T]{
+		Dispatch:   make(chan T),
 		closeCheck: make(chan struct{}),
-		entries:    make(map[string]chan interface{}),
-		ar:         make(chan splitadd),
+		entries:    make(map[string]chan T),
+		ar:         make(chan splitadd[T]),
 		OnEmpty:    func() {},
 	}
 	go s.handle()
 	return
 }
 
-func (s *Splitter) handle() {
+func (s *Splitter[T]) handle() {
 	for {
 		select {
-		case item, ok := <-s.Dispatch:
-			if !ok {
-				return
-			}
-			for _, entry := range s.entries {
-				entry <- item
-			}
 		case ar, ok := <-s.ar:
 			if !ok {
 				return
@@ -46,26 +39,33 @@ func (s *Splitter) handle() {
 			} else if ar.ch != nil {
 				s.entries[ar.id] = ar.ch
 			}
+		case item, ok := <-s.Dispatch:
+			if !ok {
+				return
+			}
+			for _, entry := range s.entries {
+				entry <- item
+			}
 		}
 	}
 }
 
-func (s *Splitter) Add(id string) <-chan interface{} {
-	c := make(chan interface{})
-	s.ar <- splitadd{
+func (s *Splitter[T]) Add(id string) <-chan T {
+	c := make(chan T)
+	s.ar <- splitadd[T]{
 		id: id,
 		ch: c,
 	}
 	return c
 }
 
-func (s *Splitter) Remove(id string) {
-	s.ar <- splitadd{
+func (s *Splitter[T]) Remove(id string) {
+	s.ar <- splitadd[T]{
 		id: id,
 	}
 }
 
-func (s *Splitter) IsOpen() bool {
+func (s *Splitter[T]) IsOpen() bool {
 	select {
 	case <-s.closeCheck:
 		return false
@@ -74,7 +74,7 @@ func (s *Splitter) IsOpen() bool {
 	}
 }
 
-func (s *Splitter) Close() {
+func (s *Splitter[T]) Close() {
 	close(s.closeCheck)
 	close(s.Dispatch)
 	for _, ch := range s.entries {
