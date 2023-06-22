@@ -2,10 +2,9 @@ package matcher
 
 import (
 	"regexp"
-	"sort"
 	"strings"
 
-	"github.com/dusk125/goutil/v3/lockable"
+	"github.com/dusk125/goutil/v4/lockable"
 )
 
 type MatchFunc func(vars Vars, msg interface{})
@@ -20,13 +19,7 @@ type matchEntry struct {
 type Vars map[string]string
 
 type Matcher struct {
-	entries *lockable.Locker[[]matchEntry]
-}
-
-func NewMatcher() *Matcher {
-	return &Matcher{
-		entries: lockable.New([]matchEntry{}),
-	}
+	entries lockable.List[matchEntry]
 }
 
 func (m *Matcher) Register(pattern string, handler MatchFunc) {
@@ -46,24 +39,26 @@ func (m *Matcher) Register(pattern string, handler MatchFunc) {
 
 	entry.exp = regexp.MustCompile(strings.Join(pieces, `\.`))
 
-	m.entries.Set(func(item *[]matchEntry) {
-		*item = append(*item, entry)
-		sort.Slice(*item, func(i, j int) bool { return (*item)[i].length > (*item)[j].length })
+	m.entries.Safe(true, func() {
+		if m.entries.UnsafeNil() {
+			m.entries.Make(0)
+		}
+		m.entries.UnsafeAppend(entry)
+		m.entries.UnsafeSort(func(i, j matchEntry) bool { return i.length > j.length })
 	})
 }
 
 func (m *Matcher) Call(path string, msg interface{}) {
-	m.entries.Get(func(item []matchEntry) {
-		for _, v := range item {
-			matches := v.exp.FindStringSubmatch(path)
-			if matches != nil {
-				vars := make(Vars)
-				for i, item := range matches[1:] {
-					vars[v.vars[i]] = item
-				}
-				v.handler(vars, msg)
-				break
+	m.entries.Foreach(func(index int, val matchEntry) (shouldBreak bool) {
+		matches := val.exp.FindStringSubmatch(path)
+		if matches != nil {
+			vars := make(Vars)
+			for i, item := range matches[1:] {
+				vars[val.vars[i]] = item
 			}
+			val.handler(vars, msg)
+			return true
 		}
+		return
 	})
 }
