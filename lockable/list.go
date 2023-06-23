@@ -6,8 +6,15 @@ import (
 	"golang.org/x/exp/slices"
 )
 
+// A lockable list that provides some list-like methods for convienence
 type List[T any] struct {
 	Locker[[]T]
+}
+
+func NewList[T any](length int, capacity ...int) *List[T] {
+	l := &List[T]{}
+	l.UnsafeMake(length, capacity...)
+	return l
 }
 
 func (l *List[T]) Make(length int, capacity ...int) {

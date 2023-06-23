@@ -2,10 +2,18 @@ package lockable
 
 import (
 	"encoding/json"
+
+	"golang.org/x/exp/maps"
 )
 
 type Map[K comparable, V any] struct {
 	Locker[map[K]V]
+}
+
+func NewMap[K comparable, V any]() *Map[K, V] {
+	m := &Map[K, V]{}
+	m.UnsafeMake()
+	return m
 }
 
 func (m *Map[K, V]) Make() {
@@ -26,6 +34,40 @@ func (m *Map[K, V]) Nil() bool {
 
 func (m *Map[K, V]) UnsafeNil() bool {
 	return m.item == nil
+}
+
+func (m *Map[K, V]) Clear() {
+	m.Lock()
+	defer m.Unlock()
+	m.UnsafeClear()
+}
+
+func (m *Map[K, V]) UnsafeClear() {
+	maps.Clear(m.item)
+}
+
+func (m *Map[K, V]) Clone() *Map[K, V] {
+	m.RLock()
+	defer m.RUnlock()
+	return m.UnsafeClone()
+}
+
+func (m *Map[K, V]) UnsafeClone() *Map[K, V] {
+	n := &Map[K, V]{}
+	n.item = maps.Clone(m.item)
+	return n
+}
+
+func (m *Map[K, V]) Copy(dst *Map[K, V]) {
+	dst.Lock()
+	defer dst.Unlock()
+	m.RLock()
+	defer m.RUnlock()
+	m.UnsafeCopy(dst)
+}
+
+func (m *Map[K, V]) UnsafeCopy(dst *Map[K, V]) {
+	maps.Copy(dst.item, m.item)
 }
 
 func (m *Map[K, V]) Get(k K) (v V, has bool) {
@@ -82,6 +124,26 @@ func (m *Map[K, V]) UnsafeDelete(k K) (v V, has bool) {
 	return
 }
 
+func (m *Map[K, V]) DeleteFunc(del func(K, V) bool) {
+	m.Lock()
+	defer m.Unlock()
+	m.UnsafeDeleteFunc(del)
+}
+
+func (m *Map[K, V]) UnsafeDeleteFunc(del func(K, V) bool) {
+	maps.DeleteFunc(m.item, del)
+}
+
+func (m *Map[K, V]) EqualFunc(m2 *Map[K, V], eq func(V, V) bool) bool {
+	m.RLock()
+	defer m.RUnlock()
+	return m.UnsafeEqualFunc(m2, eq)
+}
+
+func (m *Map[K, V]) UnsafeEqualFunc(m2 *Map[K, V], eq func(V, V) bool) bool {
+	return maps.EqualFunc(m.item, m2.item, eq)
+}
+
 func (m *Map[K, V]) Keys() []K {
 	m.RLock()
 	defer m.RUnlock()
@@ -89,11 +151,7 @@ func (m *Map[K, V]) Keys() []K {
 }
 
 func (m *Map[K, V]) UnsafeKeys() []K {
-	ks := make([]K, 0, len(m.item))
-	for k := range m.item {
-		ks = append(ks, k)
-	}
-	return ks
+	return maps.Keys(m.item)
 }
 
 func (m *Map[K, V]) Values() []V {
@@ -103,11 +161,7 @@ func (m *Map[K, V]) Values() []V {
 }
 
 func (m *Map[K, V]) UnsafeValues() []V {
-	vs := make([]V, 0, len(m.item))
-	for _, v := range m.item {
-		vs = append(vs, v)
-	}
-	return vs
+	return maps.Values(m.item)
 }
 
 func (m *Map[K, V]) Foreach(f func(k K, v V)) {
