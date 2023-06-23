@@ -18,15 +18,15 @@ func TestBroadcaster(t *testing.T) {
 	to, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	onev, hasOne := channels.RecvWithContext(to, oneCh)
-	twov, hasTwo := channels.RecvWithContext(to, twoCh)
+	onev, _, oneCancelled := channels.RecvWithContext(to, oneCh)
+	twov, _, twoCancelled := channels.RecvWithContext(to, twoCh)
 
 	switch {
 	case one == two:
 		t.Errorf("channel ids shouldn't be equal. one: %v, two: %v", one, two)
-	case !hasOne:
+	case !oneCancelled:
 		t.Error("channel one didn't recieve in time")
-	case !hasTwo:
+	case !twoCancelled:
 		t.Error("channel two didn't recieve in time")
 	case onev != twov:
 		t.Error("Values should be equal")
