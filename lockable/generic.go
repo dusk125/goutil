@@ -13,16 +13,16 @@ func New[T any](i T) *Locker[T] {
 	return &Locker[T]{item: i}
 }
 
-func (l *Locker[T]) Get(f func(item T)) {
+func (l *Locker[T]) Get() T {
 	l.RLock()
 	defer l.RUnlock()
-	f(l.item)
+	return l.item
 }
 
-func (l *Locker[T]) Set(f func(item *T)) {
+func (l *Locker[T]) Set(item T) {
 	l.Lock()
 	defer l.Unlock()
-	f(&l.item)
+	l.item = item
 }
 
 // Safe allows you to call multiple unsafe methods with only a single lock
