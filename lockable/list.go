@@ -220,14 +220,14 @@ func (l *List[T]) UnsafeUnmarshalJSON(b []byte) error {
 }
 
 // Sort sorts the list in place
-func (l *List[T]) Sort(less func(i, j T) bool) {
+func (l *List[T]) Sort(less func(i, j T) int) {
 	l.Lock()
 	defer l.Unlock()
 	l.UnsafeSort(less)
 }
 
-func (l *List[T]) UnsafeSort(less func(i, j T) bool) {
-	slices.SortFunc[T](l.item, less)
+func (l *List[T]) UnsafeSort(less func(i, j T) int) {
+	slices.SortFunc[[]T](l.item, less)
 }
 
 func (l *List[T]) Read(f func()) {

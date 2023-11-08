@@ -1,6 +1,7 @@
 package matcher
 
 import (
+	"cmp"
 	"regexp"
 	"strings"
 
@@ -44,7 +45,9 @@ func (m *Matcher) Register(pattern string, handler MatchFunc) {
 			m.entries.Make(0)
 		}
 		m.entries.UnsafeAppend(entry)
-		m.entries.UnsafeSort(func(i, j matchEntry) bool { return i.length > j.length })
+		m.entries.UnsafeSort(func(i, j matchEntry) int {
+			return cmp.Compare(i.length, j.length)
+		})
 	})
 }
 
